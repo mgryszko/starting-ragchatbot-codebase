@@ -100,19 +100,39 @@ class VectorStore:
             return SearchResults.empty(f"Search error: {str(e)}")
     
     def _resolve_course_name(self, course_name: str) -> Optional[str]:
-        """Use vector search to find best matching course by name"""
+        """
+        Use vector search to find best matching course by name.
+        Returns None if no course matches with sufficient similarity.
+        """
+        # Distance threshold for course name matching
+        # Lower = more similar. Typical good matches are < 1.0
+        # Set to 1.6 to allow partial matches like "MCP" or "Building"
+        SIMILARITY_THRESHOLD = 1.6
+
         try:
             results = self.course_catalog.query(
                 query_texts=[course_name],
                 n_results=1
             )
-            
-            if results['documents'][0] and results['metadatas'][0]:
-                # Return the title (which is now the ID)
-                return results['metadatas'][0][0]['title']
+
+            if results['documents'][0] and results['metadatas'][0] and results['distances'][0]:
+                # Check similarity using cosine distance
+                distance = results['distances'][0][0]
+                matched_title = results['metadatas'][0][0]['title']
+
+                # Log for debugging
+                print(f"Course name resolution: '{course_name}' -> '{matched_title}' (distance: {distance:.3f})")
+
+                # Only return match if similarity is good enough
+                if distance <= SIMILARITY_THRESHOLD:
+                    return matched_title
+                else:
+                    print(f"  Match rejected (distance {distance:.3f} > {SIMILARITY_THRESHOLD})")
+                    return None
+
         except Exception as e:
             print(f"Error resolving course name: {e}")
-        
+
         return None
     
     def _build_filter(self, course_title: Optional[str], lesson_number: Optional[int]) -> Optional[Dict]:
@@ -264,4 +284,48 @@ class VectorStore:
             return None
         except Exception as e:
             print(f"Error getting lesson link: {e}")
+
+    def get_course_outline(self, course_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get course outline including title, link, instructor, and lessons.
+
+        Args:
+            course_name: Course name (partial matches work)
+
+        Returns:
+            Dictionary with course info and lessons, or None if not found
+        """
+        import json
+
+        # Resolve course name using semantic search
+        course_title = self._resolve_course_name(course_name)
+        if not course_title:
+            return None
+
+        try:
+            # Get course by ID (title is the ID)
+            results = self.course_catalog.get(ids=[course_title])
+            if results and 'metadatas' in results and results['metadatas']:
+                metadata = results['metadatas'][0]
+
+                # Parse lessons from JSON
+                lessons = []
+                lessons_json = metadata.get('lessons_json')
+                if lessons_json:
+                    lessons_data = json.loads(lessons_json)
+                    lessons = [{
+                        'number': lesson['lesson_number'],
+                        'title': lesson['lesson_title']
+                    } for lesson in lessons_data]
+
+                return {
+                    'course_title': metadata.get('title'),
+                    'course_link': metadata.get('course_link'),
+                    'instructor': metadata.get('instructor'),
+                    'lessons': lessons
+                }
+            return None
+        except Exception as e:
+            print(f"Error getting course outline: {e}")
+            return None
     
