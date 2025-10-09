@@ -2,18 +2,19 @@
 Shared pytest fixtures and configuration for all tests
 """
 
-import pytest
-import sys
 import os
-import tempfile
 import shutil
+import sys
+import tempfile
+
+import pytest
 
 # Add parent directory to path so tests can import backend modules
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from models import Course, Lesson, CourseChunk
-from vector_store import VectorStore
 from config import Config
+from models import Course, CourseChunk, Lesson
+from vector_store import VectorStore
 
 
 @pytest.fixture(scope="session")
@@ -29,19 +30,19 @@ def sample_course_data():
             Lesson(
                 lesson_number=1,
                 title="What is Artificial Intelligence?",
-                lesson_link="https://example.com/ai-course/lesson1"
+                lesson_link="https://example.com/ai-course/lesson1",
             ),
             Lesson(
                 lesson_number=2,
                 title="Machine Learning Basics",
-                lesson_link="https://example.com/ai-course/lesson2"
+                lesson_link="https://example.com/ai-course/lesson2",
             ),
             Lesson(
                 lesson_number=3,
                 title="Neural Networks",
-                lesson_link="https://example.com/ai-course/lesson3"
-            )
-        ]
+                lesson_link="https://example.com/ai-course/lesson3",
+            ),
+        ],
     )
 
     chunks = [
@@ -49,20 +50,20 @@ def sample_course_data():
             content="Artificial Intelligence is the simulation of human intelligence by machines.",
             course_title=course.title,
             lesson_number=1,
-            chunk_index=0
+            chunk_index=0,
         ),
         CourseChunk(
             content="Machine learning is a subset of AI that enables computers to learn from data.",
             course_title=course.title,
             lesson_number=2,
-            chunk_index=1
+            chunk_index=1,
         ),
         CourseChunk(
             content="Neural networks are computing systems inspired by biological neural networks.",
             course_title=course.title,
             lesson_number=3,
-            chunk_index=2
-        )
+            chunk_index=2,
+        ),
     ]
 
     return {"course": course, "chunks": chunks}
@@ -95,6 +96,4 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "integration: mark test as integration test (may be slow)"
     )
-    config.addinivalue_line(
-        "markers", "unit: mark test as unit test (fast)"
-    )
+    config.addinivalue_line("markers", "unit: mark test as unit test (fast)")

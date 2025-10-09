@@ -4,20 +4,21 @@ Integration tests for the complete RAG system
 These tests verify the end-to-end flow from query to response.
 """
 
-import pytest
-import sys
 import os
-import tempfile
 import shutil
-from unittest.mock import Mock, patch, MagicMock
+import sys
+import tempfile
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 # Add parent directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from rag_system import RAGSystem
-from config import Config
-from models import Course, Lesson, CourseChunk
 from ai_generator import AIGenerator
+from config import Config
+from models import Course, CourseChunk, Lesson
+from rag_system import RAGSystem
 from vector_store import VectorStore
 
 
@@ -52,9 +53,17 @@ class TestRAGSystemIntegration:
             course_link="https://example.com/mcp",
             instructor="Dr. Test",
             lessons=[
-                Lesson(lesson_number=1, title="Introduction to MCP", lesson_link="https://example.com/mcp/1"),
-                Lesson(lesson_number=2, title="MCP Servers", lesson_link="https://example.com/mcp/2")
-            ]
+                Lesson(
+                    lesson_number=1,
+                    title="Introduction to MCP",
+                    lesson_link="https://example.com/mcp/1",
+                ),
+                Lesson(
+                    lesson_number=2,
+                    title="MCP Servers",
+                    lesson_link="https://example.com/mcp/2",
+                ),
+            ],
         )
 
     @pytest.fixture
@@ -65,14 +74,14 @@ class TestRAGSystemIntegration:
                 content="The Model Context Protocol (MCP) is a standard for connecting AI assistants to data sources.",
                 course_title=sample_course.title,
                 lesson_number=1,
-                chunk_index=0
+                chunk_index=0,
             ),
             CourseChunk(
                 content="MCP servers provide tools and resources that AI assistants can use to access external systems.",
                 course_title=sample_course.title,
                 lesson_number=2,
-                chunk_index=1
-            )
+                chunk_index=1,
+            ),
         ]
 
     def test_rag_system_initialization(self, rag_system):
@@ -100,17 +109,19 @@ class TestRAGSystemIntegration:
 
         # Should have at least the search tool
         assert len(tool_defs) > 0
-        tool_names = [tool['name'] for tool in tool_defs]
-        assert 'search_course_content' in tool_names
+        tool_names = [tool["name"] for tool in tool_defs]
+        assert "search_course_content" in tool_names
 
     def test_tool_manager_has_outline_tool(self, rag_system):
         """Test that tool manager has outline tool registered"""
         tool_defs = rag_system.tool_manager.get_tool_definitions()
 
-        tool_names = [tool['name'] for tool in tool_defs]
-        assert 'get_course_outline' in tool_names
+        tool_names = [tool["name"] for tool in tool_defs]
+        assert "get_course_outline" in tool_names
 
-    def test_search_tool_execution_via_tool_manager(self, rag_system, sample_course, sample_chunks):
+    def test_search_tool_execution_via_tool_manager(
+        self, rag_system, sample_course, sample_chunks
+    ):
         """Test executing search tool through tool manager"""
         # Setup data
         rag_system.vector_store.add_course_metadata(sample_course)
@@ -118,8 +129,7 @@ class TestRAGSystemIntegration:
 
         # Execute search via tool manager
         result = rag_system.tool_manager.execute_tool(
-            "search_course_content",
-            query="What is MCP?"
+            "search_course_content", query="What is MCP?"
         )
 
         # Verify result
@@ -133,7 +143,9 @@ class TestRAGSystemIntegration:
         rag_system.vector_store.add_course_content(sample_chunks)
 
         # Mock AI generator to avoid API call
-        with patch.object(rag_system.ai_generator, 'generate_response') as mock_generate:
+        with patch.object(
+            rag_system.ai_generator, "generate_response"
+        ) as mock_generate:
             mock_generate.return_value = "MCP is a protocol for AI assistants."
 
             # Execute query
@@ -145,12 +157,14 @@ class TestRAGSystemIntegration:
 
             # Check that tools were passed
             call_args = mock_generate.call_args
-            assert 'tools' in call_args.kwargs
-            assert 'tool_manager' in call_args.kwargs
+            assert "tools" in call_args.kwargs
+            assert "tool_manager" in call_args.kwargs
 
     def test_query_with_session_id(self, rag_system):
         """Test query with session management"""
-        with patch.object(rag_system.ai_generator, 'generate_response') as mock_generate:
+        with patch.object(
+            rag_system.ai_generator, "generate_response"
+        ) as mock_generate:
             mock_generate.return_value = "Response"
 
             # First query with session
@@ -162,12 +176,14 @@ class TestRAGSystemIntegration:
 
             # Verify history was used in second call
             second_call = mock_generate.call_args_list[1]
-            assert 'conversation_history' in second_call.kwargs
-            history = second_call.kwargs['conversation_history']
+            assert "conversation_history" in second_call.kwargs
+            history = second_call.kwargs["conversation_history"]
             assert history is not None
             assert "First question" in history
 
-    def test_source_tracking_from_search(self, rag_system, sample_course, sample_chunks):
+    def test_source_tracking_from_search(
+        self, rag_system, sample_course, sample_chunks
+    ):
         """Test that sources are tracked from search results"""
         # Setup data
         rag_system.vector_store.add_course_metadata(sample_course)
@@ -181,10 +197,12 @@ class TestRAGSystemIntegration:
 
         # Verify source format
         source = rag_system.search_tool.last_sources[0]
-        assert 'text' in source
-        assert 'link' in source
+        assert "text" in source
+        assert "link" in source
 
-    def test_source_reset_after_retrieval(self, rag_system, sample_course, sample_chunks):
+    def test_source_reset_after_retrieval(
+        self, rag_system, sample_course, sample_chunks
+    ):
         """Test that sources are reset after being retrieved"""
         # Setup data
         rag_system.vector_store.add_course_metadata(sample_course)
@@ -213,17 +231,18 @@ class TestRAGSystemIntegration:
         analytics = rag_system.get_course_analytics()
 
         # Verify
-        assert 'total_courses' in analytics
-        assert 'course_titles' in analytics
-        assert analytics['total_courses'] == 1
-        assert sample_course.title in analytics['course_titles']
+        assert "total_courses" in analytics
+        assert "course_titles" in analytics
+        assert analytics["total_courses"] == 1
+        assert sample_course.title in analytics["course_titles"]
 
     def test_add_course_document_from_file(self, rag_system, temp_chroma_path):
         """Test adding course from document file"""
         # Create a temporary course document
         doc_path = os.path.join(temp_chroma_path, "test_course.txt")
-        with open(doc_path, 'w') as f:
-            f.write("""Course Title: Test Course
+        with open(doc_path, "w") as f:
+            f.write(
+                """Course Title: Test Course
 Course Link: https://example.com/test
 Course Instructor: Dr. Test
 
@@ -234,7 +253,8 @@ This is lesson 1 content about testing.
 Lesson 2: Advanced Topics
 Lesson Link: https://example.com/lesson2
 This is lesson 2 content about advanced testing.
-""")
+"""
+            )
 
         # Add document
         course, chunk_count = rag_system.add_course_document(doc_path)
@@ -250,11 +270,15 @@ This is lesson 2 content about advanced testing.
         # Don't add any data
 
         # Mock AI to test behavior
-        with patch.object(rag_system.ai_generator, 'generate_response') as mock_generate:
+        with patch.object(
+            rag_system.ai_generator, "generate_response"
+        ) as mock_generate:
             # Simulate tool being called but finding nothing
             def mock_response(query, conversation_history, tools, tool_manager):
                 # Simulate AI deciding to search
-                result = tool_manager.execute_tool("search_course_content", query="test")
+                result = tool_manager.execute_tool(
+                    "search_course_content", query="test"
+                )
                 # AI should get empty results
                 return "I couldn't find any information about that."
 
@@ -266,7 +290,9 @@ This is lesson 2 content about advanced testing.
             assert isinstance(response, str)
             assert len(sources) == 0
 
-    def test_query_with_invalid_course_name(self, rag_system, sample_course, sample_chunks):
+    def test_query_with_invalid_course_name(
+        self, rag_system, sample_course, sample_chunks
+    ):
         """Test searching for non-existent course"""
         # Add real course
         rag_system.vector_store.add_course_metadata(sample_course)
@@ -277,7 +303,7 @@ This is lesson 2 content about advanced testing.
         result = rag_system.tool_manager.execute_tool(
             "search_course_content",
             query="anything",
-            course_name="XYZABC12345 Fake Nonsense"
+            course_name="XYZABC12345 Fake Nonsense",
         )
 
         # Should return error message
@@ -290,8 +316,7 @@ This is lesson 2 content about advanced testing.
 
         # Get outline via tool manager
         result = rag_system.tool_manager.execute_tool(
-            "get_course_outline",
-            course_name=sample_course.title
+            "get_course_outline", course_name=sample_course.title
         )
 
         # Verify
@@ -309,7 +334,7 @@ This is lesson 2 content about advanced testing.
                 content="MCP enables AI assistants to connect to data sources",
                 course_title=sample_course.title,
                 lesson_number=1,
-                chunk_index=0
+                chunk_index=0,
             )
         ]
         rag_system.vector_store.add_course_content(chunks1)
@@ -319,7 +344,7 @@ This is lesson 2 content about advanced testing.
             title="Deep Learning Basics",
             course_link="https://example.com/dl",
             instructor="Dr. Neural",
-            lessons=[Lesson(lesson_number=1, title="Neural Networks")]
+            lessons=[Lesson(lesson_number=1, title="Neural Networks")],
         )
         rag_system.vector_store.add_course_metadata(course2)
         chunks2 = [
@@ -327,15 +352,14 @@ This is lesson 2 content about advanced testing.
                 content="Neural networks are the foundation of deep learning",
                 course_title=course2.title,
                 lesson_number=1,
-                chunk_index=0
+                chunk_index=0,
             )
         ]
         rag_system.vector_store.add_course_content(chunks2)
 
         # Search without filter (should search both)
         result = rag_system.tool_manager.execute_tool(
-            "search_course_content",
-            query="learning"
+            "search_course_content", query="learning"
         )
 
         # Should find results
@@ -344,7 +368,9 @@ This is lesson 2 content about advanced testing.
 
     def test_session_isolation(self, rag_system):
         """Test that different sessions maintain separate histories"""
-        with patch.object(rag_system.ai_generator, 'generate_response') as mock_generate:
+        with patch.object(
+            rag_system.ai_generator, "generate_response"
+        ) as mock_generate:
             mock_generate.return_value = "Response"
 
             # Create two sessions
@@ -371,23 +397,22 @@ This is lesson 2 content about advanced testing.
     def test_tool_execution_error_handling(self, rag_system):
         """Test handling of tool execution errors"""
         # Try to execute non-existent tool
-        result = rag_system.tool_manager.execute_tool(
-            "nonexistent_tool",
-            query="test"
-        )
+        result = rag_system.tool_manager.execute_tool("nonexistent_tool", query="test")
 
         # Should return error message
         assert "not found" in result
 
     def test_query_formats_prompt_correctly(self, rag_system):
         """Test that query properly formats the prompt"""
-        with patch.object(rag_system.ai_generator, 'generate_response') as mock_generate:
+        with patch.object(
+            rag_system.ai_generator, "generate_response"
+        ) as mock_generate:
             mock_generate.return_value = "Response"
 
             rag_system.query("What is MCP?")
 
             # Check the prompt passed to AI
             call_args = mock_generate.call_args
-            query_arg = call_args.kwargs['query']
+            query_arg = call_args.kwargs["query"]
             assert "What is MCP?" in query_arg
             assert "course materials" in query_arg.lower()

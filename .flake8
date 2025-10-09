@@ -1,0 +1,19 @@
+# Flake8 Configuration
+# E203: whitespace before ':' (conflicts with black)
+# W503: line break before binary operator (conflicts with black)
+# E501: line too long (black handles this)
+# E402: module level import not at top of file
+# F401: imported but unused
+# F841: local variable assigned but never used
+
+[flake8]
+max-line-length = 88
+extend-ignore = E203,W503,E501,E402,F401,F841
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    .eggs,
+    *.egg,
+    build,
+    dist

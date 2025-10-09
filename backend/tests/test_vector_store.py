@@ -4,17 +4,18 @@ Tests for VectorStore with real ChromaDB integration
 These tests verify the vector store correctly stores and retrieves course data.
 """
 
-import pytest
-import sys
 import os
-import tempfile
 import shutil
+import sys
+import tempfile
+
+import pytest
 
 # Add parent directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from vector_store import VectorStore, SearchResults
-from models import Course, Lesson, CourseChunk
+from models import Course, CourseChunk, Lesson
+from vector_store import SearchResults, VectorStore
 
 
 class TestVectorStoreIntegration:
@@ -34,7 +35,7 @@ class TestVectorStoreIntegration:
         return VectorStore(
             chroma_path=temp_chroma_path,
             embedding_model="all-MiniLM-L6-v2",
-            max_results=5
+            max_results=5,
         )
 
     @pytest.fixture
@@ -45,10 +46,22 @@ class TestVectorStoreIntegration:
             course_link="https://example.com/ml-course",
             instructor="Dr. Smith",
             lessons=[
-                Lesson(lesson_number=1, title="What is ML?", lesson_link="https://example.com/lesson1"),
-                Lesson(lesson_number=2, title="Supervised Learning", lesson_link="https://example.com/lesson2"),
-                Lesson(lesson_number=3, title="Unsupervised Learning", lesson_link="https://example.com/lesson3")
-            ]
+                Lesson(
+                    lesson_number=1,
+                    title="What is ML?",
+                    lesson_link="https://example.com/lesson1",
+                ),
+                Lesson(
+                    lesson_number=2,
+                    title="Supervised Learning",
+                    lesson_link="https://example.com/lesson2",
+                ),
+                Lesson(
+                    lesson_number=3,
+                    title="Unsupervised Learning",
+                    lesson_link="https://example.com/lesson3",
+                ),
+            ],
         )
 
     @pytest.fixture
@@ -59,20 +72,20 @@ class TestVectorStoreIntegration:
                 content="Machine learning is a subset of artificial intelligence that focuses on algorithms.",
                 course_title=sample_course.title,
                 lesson_number=1,
-                chunk_index=0
+                chunk_index=0,
             ),
             CourseChunk(
                 content="Supervised learning uses labeled data to train models for prediction tasks.",
                 course_title=sample_course.title,
                 lesson_number=2,
-                chunk_index=1
+                chunk_index=1,
             ),
             CourseChunk(
                 content="Unsupervised learning finds patterns in unlabeled data through clustering.",
                 course_title=sample_course.title,
                 lesson_number=3,
-                chunk_index=2
-            )
+                chunk_index=2,
+            ),
         ]
 
     def test_add_and_retrieve_course_metadata(self, vector_store, sample_course):
@@ -87,7 +100,9 @@ class TestVectorStoreIntegration:
         titles = vector_store.get_existing_course_titles()
         assert sample_course.title in titles
 
-    def test_add_course_content_chunks(self, vector_store, sample_course, sample_chunks):
+    def test_add_course_content_chunks(
+        self, vector_store, sample_course, sample_chunks
+    ):
         """Test that course content chunks are stored"""
         # Add metadata and content
         vector_store.add_course_metadata(sample_course)
@@ -114,24 +129,25 @@ class TestVectorStoreIntegration:
         assert not results.is_empty()
         assert any("supervised" in doc.lower() for doc in results.documents)
 
-    def test_search_with_course_name_filter(self, vector_store, sample_course, sample_chunks):
+    def test_search_with_course_name_filter(
+        self, vector_store, sample_course, sample_chunks
+    ):
         """Test search filtered by course name"""
         # Setup
         vector_store.add_course_metadata(sample_course)
         vector_store.add_course_content(sample_chunks)
 
         # Search with exact course name
-        results = vector_store.search(
-            query="learning",
-            course_name=sample_course.title
-        )
+        results = vector_store.search(query="learning", course_name=sample_course.title)
 
         # Verify
         assert not results.is_empty()
         for meta in results.metadata:
-            assert meta['course_title'] == sample_course.title
+            assert meta["course_title"] == sample_course.title
 
-    def test_search_with_partial_course_name(self, vector_store, sample_course, sample_chunks):
+    def test_search_with_partial_course_name(
+        self, vector_store, sample_course, sample_chunks
+    ):
         """Test that partial course names work via semantic search"""
         # Setup
         vector_store.add_course_metadata(sample_course)
@@ -139,29 +155,27 @@ class TestVectorStoreIntegration:
 
         # Search with partial name
         results = vector_store.search(
-            query="learning",
-            course_name="Machine Learning"  # Partial match
+            query="learning", course_name="Machine Learning"  # Partial match
         )
 
         # Should still find results
         assert not results.is_empty()
 
-    def test_search_with_lesson_number_filter(self, vector_store, sample_course, sample_chunks):
+    def test_search_with_lesson_number_filter(
+        self, vector_store, sample_course, sample_chunks
+    ):
         """Test search filtered by lesson number"""
         # Setup
         vector_store.add_course_metadata(sample_course)
         vector_store.add_course_content(sample_chunks)
 
         # Search for lesson 2 specifically
-        results = vector_store.search(
-            query="learning",
-            lesson_number=2
-        )
+        results = vector_store.search(query="learning", lesson_number=2)
 
         # Verify
         assert not results.is_empty()
         for meta in results.metadata:
-            assert meta['lesson_number'] == 2
+            assert meta["lesson_number"] == 2
 
     def test_search_with_both_filters(self, vector_store, sample_course, sample_chunks):
         """Test search with both course and lesson filters"""
@@ -171,18 +185,18 @@ class TestVectorStoreIntegration:
 
         # Search with both filters
         results = vector_store.search(
-            query="learning",
-            course_name=sample_course.title,
-            lesson_number=3
+            query="learning", course_name=sample_course.title, lesson_number=3
         )
 
         # Verify
         assert not results.is_empty()
         for meta in results.metadata:
-            assert meta['course_title'] == sample_course.title
-            assert meta['lesson_number'] == 3
+            assert meta["course_title"] == sample_course.title
+            assert meta["lesson_number"] == 3
 
-    def test_search_nonexistent_course(self, vector_store, sample_course, sample_chunks):
+    def test_search_nonexistent_course(
+        self, vector_store, sample_course, sample_chunks
+    ):
         """Test search for course that doesn't exist"""
         # Setup
         vector_store.add_course_metadata(sample_course)
@@ -190,8 +204,7 @@ class TestVectorStoreIntegration:
 
         # Search for non-existent course
         results = vector_store.search(
-            query="learning",
-            course_name="Nonexistent Course XYZ"
+            query="learning", course_name="Nonexistent Course XYZ"
         )
 
         # Should return error
@@ -228,10 +241,10 @@ class TestVectorStoreIntegration:
 
         # Verify
         assert outline is not None
-        assert outline['course_title'] == sample_course.title
-        assert outline['course_link'] == sample_course.course_link
-        assert outline['instructor'] == sample_course.instructor
-        assert len(outline['lessons']) == 3
+        assert outline["course_title"] == sample_course.title
+        assert outline["course_link"] == sample_course.course_link
+        assert outline["instructor"] == sample_course.instructor
+        assert len(outline["lessons"]) == 3
 
     def test_get_course_outline_partial_name(self, vector_store, sample_course):
         """Test getting outline with partial course name"""
@@ -243,7 +256,7 @@ class TestVectorStoreIntegration:
 
         # Should still find it
         assert outline is not None
-        assert outline['course_title'] == sample_course.title
+        assert outline["course_title"] == sample_course.title
 
     def test_get_lesson_link(self, vector_store, sample_course):
         """Test retrieving specific lesson link"""
@@ -278,8 +291,12 @@ class TestVectorStoreIntegration:
             course_link="https://example.com/dl-course",
             instructor="Dr. Jones",
             lessons=[
-                Lesson(lesson_number=1, title="Neural Networks", lesson_link="https://example.com/dl-lesson1")
-            ]
+                Lesson(
+                    lesson_number=1,
+                    title="Neural Networks",
+                    lesson_link="https://example.com/dl-lesson1",
+                )
+            ],
         )
         vector_store.add_course_metadata(course2)
 
@@ -314,7 +331,7 @@ class TestVectorStoreIntegration:
         limited_store = VectorStore(
             chroma_path=temp_chroma_path,
             embedding_model="all-MiniLM-L6-v2",
-            max_results=2
+            max_results=2,
         )
 
         # Add course with many chunks
@@ -324,7 +341,7 @@ class TestVectorStoreIntegration:
                 content=f"Content piece {i} about machine learning and AI",
                 course_title=sample_course.title,
                 lesson_number=1,
-                chunk_index=i
+                chunk_index=i,
             )
             for i in range(10)
         ]
