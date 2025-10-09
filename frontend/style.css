@@ -5,7 +5,7 @@
     padding: 0;
 }
 
-/* CSS Variables */
+/* CSS Variables - Dark Theme (Default) */
 :root {
     --primary-color: #2563eb;
     --primary-hover: #1d4ed8;
@@ -24,6 +24,25 @@
     --welcome-border: #2563eb;
 }
 
+/* Light Theme */
+[data-theme="light"] {
+    --primary-color: #2563eb;
+    --primary-hover: #1d4ed8;
+    --background: #f8fafc;
+    --surface: #ffffff;
+    --surface-hover: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --border-color: #e2e8f0;
+    --user-message: #2563eb;
+    --assistant-message: #f1f5f9;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --radius: 12px;
+    --focus-ring: rgba(37, 99, 235, 0.15);
+    --welcome-bg: #eff6ff;
+    --welcome-border: #2563eb;
+}
+
 /* Base Styles */
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -34,6 +53,7 @@ body {
     overflow: hidden;
     margin: 0;
     padding: 0;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Container - Full Screen */
@@ -693,12 +713,103 @@ details[open] .suggested-header::before {
     transform: translateX(2px);
 }
 
+/* Theme Toggle Button */
+.theme-toggle {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    width: 48px;
+    height: 48px;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    box-shadow: var(--shadow);
+}
+
+.theme-toggle:hover {
+    background: var(--surface-hover);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.2);
+}
+
+.theme-toggle:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.theme-toggle:active {
+    transform: translateY(0);
+}
+
+.theme-toggle svg {
+    width: 22px;
+    height: 22px;
+    color: var(--text-primary);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.theme-toggle .sun-icon {
+    position: absolute;
+    opacity: 0;
+    transform: rotate(90deg) scale(0);
+}
+
+.theme-toggle .moon-icon {
+    position: absolute;
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+}
+
+[data-theme="light"] .theme-toggle .sun-icon {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+}
+
+[data-theme="light"] .theme-toggle .moon-icon {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0);
+}
+
+/* Smooth transitions for theme-aware elements */
+.sidebar,
+.chat-main,
+.chat-container,
+.chat-messages,
+.message-content,
+.chat-input-container,
+#chatInput,
+#sendButton,
+.new-chat-button,
+.suggested-item,
+.stat-item {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
+    .theme-toggle {
+        top: 1rem;
+        right: 1rem;
+        width: 44px;
+        height: 44px;
+    }
+
+    .theme-toggle svg {
+        width: 20px;
+        height: 20px;
+    }
+
     .main-content {
         flex-direction: column;
     }
-    
+
     .sidebar {
         width: 100%;
         border-right: none;
