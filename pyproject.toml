@@ -66,3 +66,30 @@ warn_no_return = false
 ignore_errors = false
 # Ignore specific error codes for gradual typing adoption
 disable_error_code = ["var-annotated", "arg-type", "call-overload", "no-any-return", "override", "return-value"]
+
+[tool.pytest.ini_options]
+# Pytest configuration for cleaner test execution
+testpaths = ["backend/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# Output options
+addopts = [
+    "-v",                          # Verbose output
+    "--strict-markers",            # Raise error on unknown markers
+    "--tb=short",                  # Shorter traceback format
+    "--disable-warnings",          # Disable warnings in output
+    "-ra",                         # Show summary of all test outcomes
+]
+
+# Markers for organizing tests
+markers = [
+    "unit: Unit tests (fast, isolated)",
+    "integration: Integration tests (may be slow)",
+    "api: API endpoint tests",
+]
+
+# Asyncio configuration
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
